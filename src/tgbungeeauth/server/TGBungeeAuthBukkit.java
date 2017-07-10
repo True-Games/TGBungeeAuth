@@ -1,54 +1,88 @@
 package tgbungeeauth.server;
 
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import tgbungeeauth.server.auth.AuthServerLogic;
-import tgbungeeauth.server.game.GameServerLogic;
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.events.PacketContainer;
 
-public class TGBungeeAuthBukkit extends JavaPlugin {
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
+import protocolsupport.api.Connection.PacketReceiveListener;
+import protocolsupport.api.events.PlayerLoginFinishEvent;
+import tgbungeeauth.shared.ChannelNames;
 
-	private static TGBungeeAuthBukkit instance;
+public class TGBungeeAuthBukkit extends JavaPlugin implements Listener {
 
-	public static TGBungeeAuthBukkit getInstance() {
-		return instance;
-	}
-
-	public TGBungeeAuthBukkit() {
-		instance = this;
-	}
-
-	private ServerLogic logic;
+	private String secureKey;
+	private String secureKeyTimeoutMessage;
+	private String secureKeyMissmatchMessage;
 
 	@Override
 	public void onEnable() {
 		if (!Bukkit.getPluginManager().isPluginEnabled("ProtocolLib")) {
-			TGBungeeAuthBukkit.getInstance().getLogger().severe("Missing ProtocolLib");
+			getLogger().severe("Missing ProtocolLib");
 			Bukkit.shutdown();
 		}
 		if (!Bukkit.getPluginManager().isPluginEnabled("ProtocolSupport")) {
-			TGBungeeAuthBukkit.getInstance().getLogger().severe("Missing ProtocolSupport");
+			getLogger().severe("Missing ProtocolSupport");
 			Bukkit.shutdown();
 		}
-		TGBungeeAuthBukkit.getInstance().getConfig().options().copyDefaults(true);
-		TGBungeeAuthBukkit.getInstance().saveConfig();
-		TGBungeeAuthBukkit.getInstance().reloadConfig();
+		getConfig().options().copyDefaults(true);
+		saveConfig();
+		reloadConfig();
 
-		logic = System.getProperty("tgbungeeauth.authserver") != null ? new AuthServerLogic() : new GameServerLogic();
-		try {
-			logic.start();
-		} catch (Exception e) {
-			e.printStackTrace();
-			Bukkit.shutdown();
-		}
+		secureKey = getConfig().getString("securekey");
+		secureKeyTimeoutMessage = ChatColor.translateAlternateColorCodes('&', getConfig().getString("gameserver.messages.timeout"));
+		secureKeyMissmatchMessage = ChatColor.translateAlternateColorCodes('&', getConfig().getString("gameserver.messages.missmatch"));
+		Bukkit.getPluginManager().registerEvents(this, this);
 	}
 
-	@Override
-	public void onDisable() {
+	@EventHandler(priority = EventPriority.LOWEST)
+	public void onPlayerConnect(PlayerLoginFinishEvent event) {
+		if (secureKey.equals("ChangeThisKeyAfterInstall")) {
+			event.denyLogin(ChatColor.DARK_RED + "Using default secure key is not allowed. Please notify server administrator about this.");
+			return;
+		}
+		CountDownLatch latch = new CountDownLatch(1);
+		event.getConnection().addPacketReceiveListener(new PacketReceiveListener() {
+			@Override
+			public boolean onPacketReceiving(Object packet) {
+				PacketContainer container = PacketContainer.fromPacket(packet);
+				if (container.getType() == PacketType.Play.Client.CUSTOM_PAYLOAD) {
+					if (container.getStrings().read(0).equals(ChannelNames.BUNGEE_CHANNEL)) {
+						try (DataInputStream stream = new DataInputStream(new ByteBufInputStream((ByteBuf) container.getModifier().read(1)))) {
+							if (stream.readUTF().equals(ChannelNames.TGAUTH_BUNGEE_SUBCHANNEL) && stream.readUTF().equals(ChannelNames.SECUREKEY_SUBCHANNEL)) {
+								if (!stream.readUTF().equals(secureKey)) {
+									event.denyLogin(secureKeyMissmatchMessage);
+								}
+							}
+						} catch (IOException e) {
+							event.denyLogin(ChatColor.DARK_RED + "Exception while decoding secure key");
+						}
+						latch.countDown();
+						return false;
+					}
+				}
+				return true;
+			}
+		});
 		try {
-			logic.stop();
-		} catch (Exception e) {
-			e.printStackTrace();
+			boolean confirmed = latch.await(10, TimeUnit.SECONDS);
+			if (!confirmed) {
+				event.denyLogin(secureKeyTimeoutMessage);
+			}
+		} catch (InterruptedException e) {
+			event.denyLogin(ChatColor.DARK_RED + "Exception while waiting for secure key");
 		}
 	}
 
