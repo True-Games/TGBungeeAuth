@@ -1,0 +1,33 @@
+The basics:
+
+1. When player connects he is transported to auth server
+2. The authlobby key is sent to auth server, so auth server won't do anything if player connected not via secure bungeecord
+3. When authlobby finishes auth, it sends a success status to bungeecords, and player is marked as allowed until he disconnects
+4  Player is transported to the server that he wanted to join originally (or the firsy one, if no matched virtual host was found)
+5. The secure key is sent to game server, game server won't allow player to finish login until the secure key is received
+
+Packets:
+
+CustomPayload(PluginMessage) is used with tag Bungeecord
+All packets use DataInputStream/DataOutputStream for decoding/encoding
+
+The bungee subchannel is TGAUTH
+
+1. Bungee -> AuthServer
+   UTF: subchannel
+
+   subchannel == AuthKey:
+     UTF: auth key
+     boolean: already authorized
+     boolean: force auth
+
+2. AuthLobby -> Bungee
+   UTF: subchannel
+
+   subchannel == AuthSuccess
+
+3. Bungee -> GameServer
+   UTD: subchannel
+   
+   subchannel == SecureKey:
+     UTF: secure key

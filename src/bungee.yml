@@ -1,0 +1,4 @@
+name: TGBungeeAuth
+main: tgbungeeauth.bungee.TGBungeeAuthBungee
+version: 1.0
+author: _Shevchik_

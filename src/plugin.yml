@@ -1,0 +1,17 @@
+name: TGBungeeAuth
+main: tgbungeeauth.server.TGBungeeAuthBukkit
+version: 1.0
+author: _Shevchik_
+load: STARTUP
+commands:
+  login:
+    description: AuthServer login command
+    aliases: [l]
+    usage: '/login password'
+  register:
+    description: AuthServer register command
+    aliases: [reg]
+    usage: '/register password'
+  tgbungeeauthauthserveradmin:
+    description: AuthServer admin command
+softdepend: [ProtocolSupport, ProtocolLib]

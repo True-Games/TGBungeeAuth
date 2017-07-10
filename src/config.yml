@@ -1,0 +1,54 @@
+securekey: "ChangeThisKeyAfterInstall"
+authserverkey: "ChangeThisKeyAfterInstall"
+
+bungeecord:
+  authserver: "authserver"
+  license:
+    messages:
+      enabled: "&eLicense mode enabled"
+      disabled: "&eLicense mode disabled"
+      notloggedin: "&4Login first"
+  messages:
+    noconnection: "&4Unable to connect to auth server"
+
+gameserver:
+  messages:
+    timeout: "&4Timeout while receiving secure key, please make sure that you authenticated in lobby"
+    missmatch: "&4Invalid secure key received, please make sure that gameserver and bungeecord secure keys match"
+
+authserver:
+  login:
+    algo: sha512
+    kickonwrongpwd: true
+    nick:
+      regex: "[a-zA-Z0-9_?]*"
+      maxlength: 16
+      minlength: 2
+    timeout: 20
+    helpmsginterval: 2
+    maxregsperip: 3
+    messages:
+      register:
+        already: "&cUsername already registered"
+        error: "&fAn error occurred while registering; Please contact the admin"
+        success: "&cSuccessfully registered!"
+        help: "&cPlease register with /register password"
+        max: "&fYou have exceeded the max number of registrations for your ip"
+      login:
+        success: "&cSuccessful login!"
+        error: "&fAn error occurred while login; Please contact the admin"
+        wrongpwd: "&cWrong password"
+        help: "&cPlease login with /login password"
+      passwordchange:
+        success: "&cPassword changed!"
+      timedout: "&fLogin Timeout"
+      unknownuser: "&fUser is not in database"
+      noperms: "&cNo Permission"
+      restriction:
+        namelength: "&cYour nickname is too short or too long"
+        regex: "&cYour nickname contains illegal characters. Allowed chars: REG_EX"
+        invalidcase: "&cPlease log in using valid name case: REALNAME"
+        alreadyplaying: "&cAlready logged in!"
+  messages:
+    timeout: "&4Timeout while receiving authserver key"
+    missmatch: "&4Invalid authserver key received, please make sure that authserver and bungeecord authserver keys match"
