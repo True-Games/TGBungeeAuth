@@ -178,7 +178,7 @@ public class TGBungeeAuthBungee extends Plugin implements Listener {
 
 		if (securitydatabase.isOnlineMode(name)) {
 			event.getConnection().setOnlineMode(true);
-			event.getConnection().setUniqueId(UUID.nameUUIDFromBytes(("OfflinePlayer:" + name).getBytes(Charsets.UTF_8)));
+			event.getConnection().setForcedUniqueId(UUID.nameUUIDFromBytes(("OfflinePlayer:" + name).getBytes(Charsets.UTF_8)));
 		}
 	}
 
