@@ -14,6 +14,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.PatternSyntaxException;
 
+import com.google.common.base.Charsets;
+
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.ProxyServer;
 import net.md_5.bungee.api.chat.TextComponent;
@@ -174,8 +176,9 @@ public class TGBungeeAuthBungee extends Plugin implements Listener {
 			return;
 		}
 
-		if (securitydatabase.isOnlineMode(event.getConnection().getName())) {
+		if (securitydatabase.isOnlineMode(name)) {
 			event.getConnection().setOnlineMode(true);
+			event.getConnection().setUniqueId(UUID.nameUUIDFromBytes(("OfflinePlayer:" + name).getBytes(Charsets.UTF_8)));
 		}
 	}
 
