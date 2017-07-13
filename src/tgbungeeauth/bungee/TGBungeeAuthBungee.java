@@ -277,7 +277,7 @@ public class TGBungeeAuthBungee extends Plugin implements Listener {
 	public void onPreConnect(ServerPreConnectedEvent event) throws IOException {
 		ProxiedPlayer player = event.getPlayer();
 		Server server = event.getServer();
-		if (server.getInfo().getName().equals(Settings.authserver) && succauth.contains(player.getUniqueId())) {
+		if (server.getInfo().getName().equals(Settings.authserver) || succauth.contains(player.getUniqueId())) {
 			BungeeUtils.writePluginMessage(server, ChannelNames.SECUREKEY_SUBCHANNEL, stream -> {
 				stream.writeUTF(Settings.securekey);
 			});
