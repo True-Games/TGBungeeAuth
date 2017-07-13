@@ -12,7 +12,7 @@ public class SHA256 implements EncryptionMethod {
 	}
 
 	@Override
-	public boolean comparePassword(String hash, String password, String playerName) throws NoSuchAlgorithmException {
+	public boolean comparePassword(String hash, String password) throws NoSuchAlgorithmException {
 		String[] line = hash.split("\\$");
 		return hash.equals(getHash(password, line[2]));
 	}

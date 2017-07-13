@@ -31,6 +31,6 @@ public interface EncryptionMethod {
 	 * @return true if password match, false else
 	 * @throws NoSuchAlgorithmException
 	 */
-	boolean comparePassword(String hash, String password, String playerName) throws NoSuchAlgorithmException;
+	boolean comparePassword(String hash, String password) throws NoSuchAlgorithmException;
 
 }

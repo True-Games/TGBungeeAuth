@@ -16,17 +16,19 @@ bungeecord:
       register:
         already: "&cUsername already registered"
         error: "&fAn error occurred while registering; Please contact the admin"
-        success: "&cSuccessfully registered!"
+        success: "&eSuccessfully registered!"
         help: "&cPlease register with /register password"
         max: "&fYou have exceeded the max number of registrations for your ip"
       login:
         already: "&cAlready logged in"
-        success: "&cSuccessful login!"
+        success: "&eSuccessful login!"
         error: "&fAn error occurred while login; Please contact the admin"
         wrongpwd: "&cWrong password"
         help: "&cPlease login with /login password"
       passwordchange:
-        success: "&cPassword changed!"
+        wrongpwd: "&cWrong old password"
+        success: "&ePassword changed!"
+        error: "&fAn error occurred while changing password; Please contact the admin"
       timedout: "&fLogin Timeout"
       unknownuser: "&fUser is not in database"
       noperms: "&cNo Permission"

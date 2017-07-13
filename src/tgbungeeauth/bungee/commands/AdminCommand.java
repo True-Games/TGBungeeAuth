@@ -60,13 +60,15 @@ public class AdminCommand extends Command {
 				return;
 			}
 			try {
-				if (adatabase.isAuthAvailable(args[1])) {
-					adatabase.updatePassword(args[1], PasswordSecurity.getHash(Settings.hashAlgo, args[2]));
+				PlayerAuth auth = adatabase.getAuth(args[1]);
+				if (auth != null) {
+					auth.setHash(PasswordSecurity.getHash(Settings.hashAlgo, args[2]));
 					sender.sendMessage(new TextComponent(Messages.passwordChangeSuccess));
 				} else {
 					sender.sendMessage(new TextComponent(Messages.unknownUser));
 				}
 			} catch (NoSuchAlgorithmException ex) {
+				sender.sendMessage(new TextComponent(Messages.passwordChangeError));
 			}
 		} else if (args[0].equalsIgnoreCase("unregister") || args[0].equalsIgnoreCase("unreg") || args[0].equalsIgnoreCase("del")) {
 			if (args.length != 2) {

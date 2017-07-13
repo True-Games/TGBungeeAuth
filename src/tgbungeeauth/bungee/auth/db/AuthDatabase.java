@@ -48,10 +48,6 @@ public class AuthDatabase {
 		clearAuth(user.toLowerCase());
 	}
 
-	public synchronized void updatePassword(String user, String hash) {
-		authCache.get(user.toLowerCase()).setHash(hash);
-	}
-
 	public synchronized void updateSession(String user, String ip, long lastlogin) {
 		PlayerAuth auth = authCache.get(user.toLowerCase());
 		auth.setLastLogin(lastlogin);

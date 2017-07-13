@@ -378,7 +378,7 @@ public class WHIRLPOOL implements EncryptionMethod {
 	}
 
 	@Override
-	public boolean comparePassword(String hash, String password, String playerName) throws NoSuchAlgorithmException {
+	public boolean comparePassword(String hash, String password) throws NoSuchAlgorithmException {
 		return hash.equals(getHash(password, ""));
 	}
 }

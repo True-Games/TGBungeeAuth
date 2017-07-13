@@ -29,29 +29,26 @@ public class PasswordSecurity {
 		}
 		String salt = "";
 		switch (alg) {
-			case SHA256:
+			case SHA256: {
 				salt = createSalt(16);
 				break;
-			case XAUTH:
+			}
+			case XAUTH: {
 				salt = createSalt(12);
 				break;
-			case MD5:
-			case SHA1:
-			case WHIRLPOOL:
-			case SHA512:
-			case DOUBLEMD5:
+			}
+			default: {
 				break;
-			default:
-				throw new NoSuchAlgorithmException("Unknown hash algorithm");
+			}
 		}
 		return method.getHash(password, salt);
 	}
 
-	public static boolean comparePasswordWithHash(String password, String hash, String playerName) {
+	public static boolean comparePasswordWithHash(String password, String hash) {
 		for (HashAlgorithm algo : HashAlgorithm.values()) {
 			try {
 				EncryptionMethod method = (EncryptionMethod) algo.getImplClass().newInstance();
-				if (method.comparePassword(hash, password, playerName)) {
+				if (method.comparePassword(hash, password)) {
 					return true;
 				}
 			} catch (Exception e) {

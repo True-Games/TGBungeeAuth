@@ -39,6 +39,7 @@ import tgbungeeauth.bungee.auth.db.AuthDatabase;
 import tgbungeeauth.bungee.auth.db.PlayerAuth;
 import tgbungeeauth.bungee.auth.managment.AsyncLogin;
 import tgbungeeauth.bungee.commands.AdminCommand;
+import tgbungeeauth.bungee.commands.ChangePasswordCommand;
 import tgbungeeauth.bungee.commands.HostnameCommand;
 import tgbungeeauth.bungee.commands.LicenseCommand;
 import tgbungeeauth.bungee.commands.LoginCommand;
@@ -119,6 +120,7 @@ public class TGBungeeAuthBungee extends Plugin implements Listener {
 		pm.registerCommand(this, new LoginCommand());
 		pm.registerCommand(this, new RegisterCommand());
 		pm.registerCommand(this, new HostnameCommand());
+		pm.registerCommand(this, new ChangePasswordCommand());
 		pm.registerListener(this, this);
 	}
 

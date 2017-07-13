@@ -23,6 +23,8 @@ public class Messages {
 	public static String loginWrongPassword;
 	public static String loginHelp;
 	public static String passwordChangeSuccess;
+	public static String passwordChangeWrongPassword;
+	public static String passwordChangeError;
 	public static String timedOut;
 	public static String unknownUser;
 	public static String noPerms;
@@ -50,6 +52,8 @@ public class Messages {
 		loginWrongPassword = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.login.wrongpwd"));
 		loginHelp = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.login.help"));
 		passwordChangeSuccess = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.passwordchange.success"));
+		passwordChangeWrongPassword = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.passwordchange.wrongpwd"));
+		passwordChangeError = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.passwordchange.error"));
 		timedOut = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.timedout"));
 		unknownUser = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.unknownuser"));
 		noPerms = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.noperms"));

@@ -34,7 +34,7 @@ public class AsyncLogin implements Runnable {
 			return;
 		}
 
-		if (PasswordSecurity.comparePasswordWithHash(password, pAuth.getHash(), name)) {
+		if (PasswordSecurity.comparePasswordWithHash(password, pAuth.getHash())) {
 			login(player);
 		} else {
 			if (Settings.isKickOnWrongPasswordEnabled) {
