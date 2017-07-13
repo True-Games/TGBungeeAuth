@@ -32,6 +32,8 @@ import net.md_5.bungee.api.event.ServerPreConnectedEvent;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.api.plugin.Plugin;
 import net.md_5.bungee.api.plugin.PluginManager;
+import net.md_5.bungee.config.ConfigurationProvider;
+import net.md_5.bungee.config.YamlConfiguration;
 import net.md_5.bungee.event.EventHandler;
 import net.md_5.bungee.event.EventPriority;
 import tgbungeeauth.bungee.auth.db.AuthDataStorage;
@@ -84,12 +86,24 @@ public class TGBungeeAuthBungee extends Plugin implements Listener {
 	public void onEnable() {
 		getDataFolder().mkdir();
 
-		File file = new File(getDataFolder(), "config.yml");
-		if (!file.exists()) {
+		File configfile = new File(getDataFolder(), "config.yml");
+		if (!configfile.exists()) {
 			try (InputStream in = getResourceAsStream("config.yml")) {
-				Files.copy(in, file.toPath());
+				Files.copy(in, configfile.toPath());
 			} catch (IOException e) {
 			}
+		} else {
+			File defconfigfile = new File(getDataFolder(), "defconfig.yml");
+			try (InputStream in = getResourceAsStream("config.yml")) {
+				Files.copy(in, defconfigfile.toPath());
+			} catch (IOException e) {
+			}
+			ConfigurationProvider provider = ConfigurationProvider.getProvider(YamlConfiguration.class);
+			try {
+				provider.save(BungeeUtils.copyDefaultOptions(provider.load(configfile), provider.load(defconfigfile)), configfile);
+			} catch (IOException e) {
+			}
+			defconfigfile.delete();
 		}
 
 		try {
@@ -264,7 +278,7 @@ public class TGBungeeAuthBungee extends Plugin implements Listener {
 		ProxiedPlayer player = event.getPlayer();
 		Server server = event.getServer();
 		if (server.getInfo().getName().equals(Settings.authserver) && succauth.contains(player.getUniqueId())) {
-			MessageWriter.writeMessage(server, ChannelNames.SECUREKEY_SUBCHANNEL, stream -> {
+			BungeeUtils.writePluginMessage(server, ChannelNames.SECUREKEY_SUBCHANNEL, stream -> {
 				stream.writeUTF(Settings.securekey);
 			});
 		}
