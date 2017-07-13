@@ -12,8 +12,6 @@ import tgbungeeauth.bungee.TGBungeeAuthBungee;
 public class Messages {
 
 	public static String notloggedin;
-	public static String licenseMessageAdded;
-	public static String licenseMessageRemoved;
 	public static String registerAlready;
 	public static String registerError;
 	public static String registerSuccess;
@@ -32,12 +30,15 @@ public class Messages {
 	public static String restrictionRegex;
 	public static String restrictionInvalidCase;
 	public static String restrictionAlreadyPlaying;
+	public static String optsecurityHostnameWrong;
+	public static String optsecurityHostnameAdded;
+	public static String optsecurityHostnameRemoved;
+	public static String optsecurityLicenseAdded;
+	public static String optsecurityLicenseRemoved;
 
 	public static void loadConfig() throws IOException {
 		Configuration config = ConfigurationProvider.getProvider(YamlConfiguration.class).load(new File(TGBungeeAuthBungee.getInstance().getDataFolder(), "config.yml"));
 		notloggedin = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.messages.notloggedin"));
-		licenseMessageAdded = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.license.enabled"));
-		licenseMessageRemoved = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.license.disabled"));
 		registerAlready = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.register.already"));
 		registerError = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.register.error"));
 		registerSuccess = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.register.success"));
@@ -56,6 +57,11 @@ public class Messages {
 		restrictionRegex = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.restriction.regex"));
 		restrictionInvalidCase = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.restriction.invalidcase"));
 		restrictionAlreadyPlaying = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.restriction.alreadyplaying"));
+		optsecurityHostnameWrong = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.optsecurity.hostname.wrong"));
+		optsecurityHostnameAdded = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.optsecurity.hostname.set"));
+		optsecurityHostnameRemoved = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.optsecurity.hostname.removed"));
+		optsecurityLicenseAdded = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.optsecurity.license.enabled"));
+		optsecurityLicenseRemoved = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.optsecurity.license.disabled"));
 	}
 
 }

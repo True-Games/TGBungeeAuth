@@ -20,7 +20,7 @@ public class LoginCommand extends Command {
 		}
 
 		if (args.length == 1) {
-			ProxyServer.getInstance().getScheduler().runAsync(TGBungeeAuthBungee.getInstance(), new AsyncLogin((ProxiedPlayer) sender, args[0], false));
+			ProxyServer.getInstance().getScheduler().runAsync(TGBungeeAuthBungee.getInstance(), new AsyncLogin((ProxiedPlayer) sender, args[0]));
 		}
 	}
 

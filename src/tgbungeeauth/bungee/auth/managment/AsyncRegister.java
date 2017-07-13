@@ -1,12 +1,12 @@
 package tgbungeeauth.bungee.auth.managment;
 
-import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 import tgbungeeauth.bungee.TGBungeeAuthBungee;
 import tgbungeeauth.bungee.auth.db.AuthDatabase;
+import tgbungeeauth.bungee.auth.db.PlayerAuth;
 import tgbungeeauth.bungee.auth.security.PasswordSecurity;
 import tgbungeeauth.bungee.config.Messages;
 import tgbungeeauth.bungee.config.Settings;
@@ -36,8 +36,13 @@ public class AsyncRegister implements Runnable {
 		}
 
 		try {
-			SharedManagement.finish(player, PasswordSecurity.getHash(Settings.hashAlgo, password), true);
-		} catch (NoSuchAlgorithmException | IOException e) {
+			PlayerAuth auth = new PlayerAuth(player.getName(), PasswordSecurity.getHash(Settings.hashAlgo, password));
+			adatabase.saveAuth(auth);
+
+			player.sendMessage(new TextComponent(Messages.registerSuccess));
+
+			AsyncLogin.login(player);
+		} catch (NoSuchAlgorithmException e) {
 			player.sendMessage(new TextComponent(Messages.registerError));
 		}
 	}

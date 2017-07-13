@@ -1,7 +1,5 @@
 package tgbungeeauth.bungee.auth.managment;
 
-import java.io.IOException;
-
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 import tgbungeeauth.bungee.TGBungeeAuthBungee;
@@ -15,13 +13,11 @@ public class AsyncLogin implements Runnable {
 	private final ProxiedPlayer player;
 	private final String name;
 	private final String password;
-	private final boolean forceLogin;
 
-	public AsyncLogin(ProxiedPlayer player, String password, boolean forceLogin) {
+	public AsyncLogin(ProxiedPlayer player, String password) {
 		this.player = player;
 		this.password = password;
 		this.name = player.getName().toLowerCase();
-		this.forceLogin = forceLogin;
 	}
 
 	@Override
@@ -38,22 +34,25 @@ public class AsyncLogin implements Runnable {
 			return;
 		}
 
-		String hash = pAuth.getHash();
-		boolean passwordVerified = forceLogin || PasswordSecurity.comparePasswordWithHash(password, hash, name);
-		if (passwordVerified) {
-			try {
-				SharedManagement.finish(player, hash, false);
-			} catch (IOException e) {
-				player.sendMessage(new TextComponent(Messages.loginError));
-			}
+		if (PasswordSecurity.comparePasswordWithHash(password, pAuth.getHash(), name)) {
+			login(player);
 		} else {
 			if (Settings.isKickOnWrongPasswordEnabled) {
 				player.disconnect(new TextComponent(Messages.loginWrongPassword));
 			} else {
 				player.sendMessage(new TextComponent(Messages.loginWrongPassword));
-				return;
 			}
 		}
+	}
+
+	public static void login(ProxiedPlayer player) {
+		TGBungeeAuthBungee plugin = TGBungeeAuthBungee.getInstance();
+
+		plugin.getAuthDatabase().updateSession(player.getName(), player.getAddress().getHostString(), System.currentTimeMillis());
+
+		player.sendMessage(new TextComponent(Messages.loginSuccess));
+
+		plugin.finishAuth(player);
 	}
 
 }

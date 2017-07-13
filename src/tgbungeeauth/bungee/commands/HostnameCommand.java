@@ -8,10 +8,10 @@ import tgbungeeauth.bungee.TGBungeeAuthBungee;
 import tgbungeeauth.bungee.auth.db.PlayerAuth;
 import tgbungeeauth.bungee.config.Messages;
 
-public class LicenseCommand extends Command {
+public class HostnameCommand extends Command {
 
-	public LicenseCommand() {
-		super("license");
+	public HostnameCommand() {
+		super("hostname");
 	}
 
 	@Override
@@ -31,12 +31,12 @@ public class LicenseCommand extends Command {
 				return;
 			}
 
-			if (auth.isOnlineMode()) {
-				auth.setOnlineMode(false);
-				player.sendMessage(new TextComponent(Messages.optsecurityLicenseRemoved));
+			if (args.length == 0) {
+				auth.setHostname(null);
+				player.sendMessage(new TextComponent(Messages.optsecurityHostnameRemoved));
 			} else {
-				auth.setOnlineMode(true);
-				player.sendMessage(new TextComponent(Messages.optsecurityLicenseAdded));
+				auth.setHostname(args[0]);
+				player.sendMessage(new TextComponent(Messages.optsecurityHostnameAdded));
 			}
 		}
 	}

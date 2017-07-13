@@ -34,11 +34,12 @@ import net.md_5.bungee.api.plugin.Plugin;
 import net.md_5.bungee.api.plugin.PluginManager;
 import net.md_5.bungee.event.EventHandler;
 import net.md_5.bungee.event.EventPriority;
+import tgbungeeauth.bungee.auth.db.AuthDataStorage;
 import tgbungeeauth.bungee.auth.db.AuthDatabase;
-import tgbungeeauth.bungee.auth.db.FileDataBackend;
 import tgbungeeauth.bungee.auth.db.PlayerAuth;
 import tgbungeeauth.bungee.auth.managment.AsyncLogin;
 import tgbungeeauth.bungee.commands.AdminCommand;
+import tgbungeeauth.bungee.commands.HostnameCommand;
 import tgbungeeauth.bungee.commands.LicenseCommand;
 import tgbungeeauth.bungee.commands.LoginCommand;
 import tgbungeeauth.bungee.commands.RegisterCommand;
@@ -66,18 +67,16 @@ public class TGBungeeAuthBungee extends Plugin implements Listener {
 
 	public void finishAuth(ProxiedPlayer player) {
 		succauth.add(player.getUniqueId());
-		player.connect(targetservers.get(player.getUniqueId()));
+		ServerInfo target = targetservers.get(player.getUniqueId());
+		if (target != null) {
+			player.connect(target);
+		}
 	}
 
-	private final AuthDatabase authdatabase = new AuthDatabase(new FileDataBackend(), 60);
-	private final SecurityDatabase securitydatabase = new SecurityDatabase();
+	private final AuthDatabase authdatabase = new AuthDatabase(new AuthDataStorage(), 60);
 
 	public AuthDatabase getAuthDatabase() {
 		return authdatabase;
-	}
-
-	public SecurityDatabase getSecDatabase() {
-		return securitydatabase;
 	}
 
 	@Override
@@ -109,8 +108,7 @@ public class TGBungeeAuthBungee extends Plugin implements Listener {
 
 		try {
 			authdatabase.load();
-			securitydatabase.load();
-		} catch (IOException e) {
+		} catch (Exception e) {
 			getLogger().severe("Unable to load database");
 			ProxyServer.getInstance().stop();
 		}
@@ -120,13 +118,13 @@ public class TGBungeeAuthBungee extends Plugin implements Listener {
 		pm.registerCommand(this, new AdminCommand());
 		pm.registerCommand(this, new LoginCommand());
 		pm.registerCommand(this, new RegisterCommand());
+		pm.registerCommand(this, new HostnameCommand());
 		pm.registerListener(this, this);
 	}
 
 	@Override
 	public void onDisable() {
 		authdatabase.save();
-		securitydatabase.save();
 	}
 
 	@EventHandler(priority = EventPriority.LOWEST)
@@ -153,16 +151,6 @@ public class TGBungeeAuthBungee extends Plugin implements Listener {
 			return;
 		}
 
-		if (authdatabase.isAuthAvailable(name)) {
-			PlayerAuth auth = authdatabase.getAuth(name);
-			String realnickname = auth.getRealNickname();
-			if (!realnickname.isEmpty() && !name.equals(realnickname)) {
-				event.setCancelled(true);
-				event.setCancelReason(new TextComponent(Messages.restrictionInvalidCase.replace("REALNAME", realnickname)));
-				return;
-			}
-		}
-
 		ProxiedPlayer oplayer = null;
 		try {
 			oplayer = ProxyServer.getInstance().getPlayer(name);
@@ -176,15 +164,39 @@ public class TGBungeeAuthBungee extends Plugin implements Listener {
 			return;
 		}
 
-		if (securitydatabase.isOnlineMode(name)) {
-			event.getConnection().setOnlineMode(true);
-			event.getConnection().setForcedUniqueId(UUID.nameUUIDFromBytes(("OfflinePlayer:" + name).getBytes(Charsets.UTF_8)));
+		PlayerAuth auth = authdatabase.getAuth(name);
+		if (auth != null) {
+			String realnickname = auth.getRealNickname();
+			if (!name.equals(realnickname)) {
+				event.setCancelled(true);
+				event.setCancelReason(new TextComponent(Messages.restrictionInvalidCase.replace("REALNAME", realnickname)));
+				return;
+			}
+
+			if (!auth.getHostname().isEmpty()) {
+				if (!event.getConnection().getVirtualHost().getHostString().startsWith(auth.getHostname())) {
+					event.setCancelled(true);
+					event.setCancelReason(new TextComponent(Messages.optsecurityHostnameWrong));
+					return;
+				}
+			}
+
+			if (auth.isOnlineMode()) {
+				event.getConnection().setOnlineMode(true);
+				event.getConnection().setForcedUniqueId(UUID.nameUUIDFromBytes(("OfflinePlayer:" + name).getBytes(Charsets.UTF_8)));
+			}
 		}
 	}
 
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onPlayerJoin(PostLoginEvent event) {
 		ProxiedPlayer player = event.getPlayer();
+
+		PlayerAuth auth = authdatabase.getAuth(player.getName());
+		if (auth != null && (auth.isOnlineMode() || !auth.getHostname().isEmpty())) {
+			AsyncLogin.login(player);
+			return;
+		}
 
 		long timeout = Settings.timeout;
 		if (timeout != 0) {
@@ -242,9 +254,6 @@ public class TGBungeeAuthBungee extends Plugin implements Listener {
 				return;
 			}
 			event.setTarget(authserveri);
-			if (securitydatabase.isOnlineMode(player.getName())) {
-				ProxyServer.getInstance().getScheduler().runAsync(this, new AsyncLogin(player, "forcelogin", true));
-			}
 		}
 	}
 
@@ -252,7 +261,7 @@ public class TGBungeeAuthBungee extends Plugin implements Listener {
 	public void onPreConnect(ServerPreConnectedEvent event) throws IOException {
 		ProxiedPlayer player = event.getPlayer();
 		Server server = event.getServer();
-		if (!server.getInfo().getName().equals(Settings.authserver) && succauth.contains(player.getUniqueId())) {
+		if (server.getInfo().getName().equals(Settings.authserver) && succauth.contains(player.getUniqueId())) {
 			MessageWriter.writeMessage(server, ChannelNames.SECUREKEY_SUBCHANNEL, stream -> {
 				stream.writeUTF(Settings.securekey);
 			});

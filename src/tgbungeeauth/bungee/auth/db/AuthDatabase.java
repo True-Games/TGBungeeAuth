@@ -1,5 +1,6 @@
 package tgbungeeauth.bungee.auth.db;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -13,7 +14,7 @@ import tgbungeeauth.bungee.TGBungeeAuthBungee;
 
 public class AuthDatabase {
 
-	private final FileDataBackend source;
+	private final AuthDataStorage source;
 	private final int autosaveinterval;
 
 	private final HashMap<String, PlayerAuth> authCache = new HashMap<>();
@@ -21,12 +22,12 @@ public class AuthDatabase {
 
 	private ScheduledTask autosavetask = null;
 
-	public AuthDatabase(FileDataBackend databackend, int autosaveinterval) {
+	public AuthDatabase(AuthDataStorage databackend, int autosaveinterval) {
 		this.source = databackend;
 		this.autosaveinterval = autosaveinterval;
 	}
 
-	public synchronized void load() {
+	public synchronized void load() throws IOException {
 		cacheAllAuths();
 		scheduleAutoSaveTask();
 	}
@@ -47,13 +48,14 @@ public class AuthDatabase {
 		clearAuth(user.toLowerCase());
 	}
 
-	public synchronized void updatePassword(PlayerAuth auth) {
-		authCache.get(auth.getNickname()).setHash(auth.getHash());
+	public synchronized void updatePassword(String user, String hash) {
+		authCache.get(user.toLowerCase()).setHash(hash);
 	}
 
-	public synchronized void updateSession(PlayerAuth auth) {
-		authCache.get(auth.getNickname()).setIp(auth.getIp());
-		authCache.get(auth.getNickname()).setLastLogin(auth.getLastLogin());
+	public synchronized void updateSession(String user, String ip, long lastlogin) {
+		PlayerAuth auth = authCache.get(user.toLowerCase());
+		auth.setLastLogin(lastlogin);
+		auth.setIp(ip);
 	}
 
 	public synchronized List<String> getAllAuthsByIp(String ip) {
@@ -68,7 +70,7 @@ public class AuthDatabase {
 		int cleared = 0;
 		for (PlayerAuth auth : new LinkedList<>(authCache.values())) {
 			if (auth.getLastLogin() < until) {
-				clearAuth(auth.getNickname());
+				clearAuth(auth.getRealNickname());
 				cleared++;
 			}
 		}
@@ -79,7 +81,7 @@ public class AuthDatabase {
 		source.dumpAuths(authCache.values());
 	}
 
-	public synchronized void reload() {
+	public synchronized void reload() throws IOException {
 		if (autosavetask != null) {
 			autosavetask.cancel();
 		}
@@ -89,7 +91,7 @@ public class AuthDatabase {
 		cacheAllAuths();
 	}
 
-	private void cacheAllAuths() {
+	private void cacheAllAuths() throws IOException {
 		List<PlayerAuth> auths = source.getAllAuths();
 		for (PlayerAuth auth : auths) {
 			cacheAuth(auth);
@@ -97,7 +99,7 @@ public class AuthDatabase {
 	}
 
 	private void cacheAuth(PlayerAuth auth) {
-		String nick = auth.getNickname();
+		String nick = auth.getRealNickname().toLowerCase();
 		authCache.put(nick, auth);
 		String ip = auth.getIp();
 		if (!ipCache.containsKey(ip)) {

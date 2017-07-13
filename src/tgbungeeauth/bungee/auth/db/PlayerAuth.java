@@ -2,26 +2,29 @@ package tgbungeeauth.bungee.auth.db;
 
 public class PlayerAuth {
 
-	private String nickname = "";
-	private String realnickname = "";
-	private String hash = "";
+	private final String realnickname;
+	private String hash;
 	private String ip = "198.18.0.1";
 	private long lastLogin = 0;
+	private boolean onlinemode = false;
+	private String hostname = "";
 
-	public PlayerAuth(String nickname, String realnickname, String hash, String ip, long lastLogin) {
-		this.nickname = nickname;
+	public PlayerAuth(String realnickname, String hash) {
+		this.realnickname = realnickname;
+		this.hash = hash;
+	}
+
+	public PlayerAuth(String realnickname, String hash, String ip, long lastlogin, boolean onlinemode, String hostname) {
 		this.realnickname = realnickname;
 		this.hash = hash;
 		this.ip = ip;
-		this.lastLogin = lastLogin;
+		this.lastLogin = lastlogin;
+		this.onlinemode = onlinemode;
+		this.hostname = hostname;
 	}
 
 	public String getIp() {
 		return ip;
-	}
-
-	public String getNickname() {
-		return nickname;
 	}
 
 	public String getRealNickname() {
@@ -36,6 +39,14 @@ public class PlayerAuth {
 		return lastLogin;
 	}
 
+	public boolean isOnlineMode() {
+		return onlinemode;
+	}
+
+	public String getHostname() {
+		return this.hostname;
+	}
+
 	public void setHash(String hash) {
 		this.hash = hash;
 	}
@@ -48,26 +59,12 @@ public class PlayerAuth {
 		this.lastLogin = lastLogin;
 	}
 
-	@Override
-	public boolean equals(Object obj) {
-		if (!(obj instanceof PlayerAuth)) {
-			return false;
-		}
-		PlayerAuth other = (PlayerAuth) obj;
-		return other.getIp().equals(this.ip) && other.getNickname().equals(this.nickname);
+	public void setOnlineMode(boolean onlinemode) {
+		this.onlinemode = onlinemode;
 	}
 
-	@Override
-	public int hashCode() {
-		int hashCode = 7;
-		hashCode = (71 * hashCode) + (this.nickname != null ? this.nickname.hashCode() : 0);
-		hashCode = (71 * hashCode) + (this.ip != null ? this.ip.hashCode() : 0);
-		return hashCode;
-	}
-
-	@Override
-	public String toString() {
-		return "Player : " + nickname + " ! IP : " + ip + " ! LastLogin : " + lastLogin + " ! Hash : " + hash;
+	public void setHostname(String hostname) {
+		this.hostname = hostname;
 	}
 
 }

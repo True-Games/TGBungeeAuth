@@ -44,13 +44,12 @@ public class AdminCommand extends Command {
 				return;
 			}
 			try {
-				String lcname = args[1].toLowerCase();
-				if (adatabase.isAuthAvailable(lcname)) {
+				if (adatabase.isAuthAvailable(args[1])) {
 					sender.sendMessage(new TextComponent(Messages.registerAlready));
 					return;
 				}
 				String hash = PasswordSecurity.getHash(Settings.hashAlgo, args[2]);
-				PlayerAuth auth = new PlayerAuth(lcname, args[1], hash, "198.18.0.1", System.currentTimeMillis());
+				PlayerAuth auth = new PlayerAuth(args[1], hash);
 				adatabase.saveAuth(auth);
 				sender.sendMessage(new TextComponent(Messages.registerSuccess));
 			} catch (NoSuchAlgorithmException ex) {
@@ -61,13 +60,8 @@ public class AdminCommand extends Command {
 				return;
 			}
 			try {
-				String lcname = args[1].toLowerCase();
-				String hash = PasswordSecurity.getHash(Settings.hashAlgo, args[2]);
-				PlayerAuth auth = null;
-				if (adatabase.isAuthAvailable(lcname)) {
-					auth = adatabase.getAuth(lcname);
-					auth.setHash(hash);
-					adatabase.updatePassword(auth);
+				if (adatabase.isAuthAvailable(args[1])) {
+					adatabase.updatePassword(args[1], PasswordSecurity.getHash(Settings.hashAlgo, args[2]));
 					sender.sendMessage(new TextComponent(Messages.passwordChangeSuccess));
 				} else {
 					sender.sendMessage(new TextComponent(Messages.unknownUser));

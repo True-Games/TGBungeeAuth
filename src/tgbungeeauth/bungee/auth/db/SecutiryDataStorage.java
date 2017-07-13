@@ -1,17 +1,20 @@
-package tgbungeeauth.bungee;
+package tgbungeeauth.bungee.auth.db;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 
 import net.md_5.bungee.config.Configuration;
 import net.md_5.bungee.config.ConfigurationProvider;
 import net.md_5.bungee.config.YamlConfiguration;
+import tgbungeeauth.bungee.TGBungeeAuthBungee;
 
-public class SecurityDatabase {
+public class SecutiryDataStorage {
 
-	private HashSet<String> license = new HashSet<>();
+	private final HashSet<String> license = new HashSet<>();
+	private final HashMap<String, String> hostname = new HashMap<>();
 
 	public void addOnlineMode(String name) {
 		license.add(name.toLowerCase());
@@ -25,6 +28,18 @@ public class SecurityDatabase {
 		return license.contains(name.toLowerCase());
 	}
 
+	public void addHostname(String playername, String name) {
+		hostname.put(playername.toLowerCase(), name);
+	}
+
+	public void removeHostname(String playername) {
+		hostname.remove(playername.toLowerCase());
+	}
+
+	public String getHostname(String playername) {
+		return hostname.remove(playername.toLowerCase());
+	}
+
 	private File getFile() {
 		return new File(TGBungeeAuthBungee.getInstance().getDataFolder(), "database.yml");
 	}
@@ -35,7 +50,12 @@ public class SecurityDatabase {
 			db.createNewFile();
 		}
 		Configuration configuration = ConfigurationProvider.getProvider(YamlConfiguration.class).load(db);
-		license.addAll(configuration.getStringList("license"));
+		AuthDatabase adatabase = TGBungeeAuthBungee.getInstance().getAuthDatabase();
+		for (String user : configuration.getStringList("license")) {
+			if (adatabase.isAuthAvailable(user)) {
+				license.add(user);
+			}
+		}
 	}
 
 	public void save() {

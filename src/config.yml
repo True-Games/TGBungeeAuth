@@ -35,9 +35,14 @@ bungeecord:
         regex: "&cYour nickname contains illegal characters. Allowed chars: REG_EX"
         invalidcase: "&cPlease log in using valid name case: REALNAME"
         alreadyplaying: "&cAlready logged in!"
-      license:
-        enabled: "&eLicense mode enabled"
-        disabled: "&eLicense mode disabled"
+      optsecurity:
+        hostname:
+          wrong: "&cJoined hostname doesn't match"
+          set: "&eJoin hostname set"
+          removed: "&eJoin hostname removed"
+        license:
+          enabled: "&eLicense mode enabled"
+          disabled: "&eLicense mode disabled"
   messages:
     notloggedin: "&4Login first"
 
