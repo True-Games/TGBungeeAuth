@@ -22,13 +22,10 @@ import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.api.config.ServerInfo;
 import net.md_5.bungee.api.connection.Connection;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
-import net.md_5.bungee.api.connection.Server;
 import net.md_5.bungee.api.event.ChatEvent;
 import net.md_5.bungee.api.event.PlayerDisconnectEvent;
 import net.md_5.bungee.api.event.PostLoginEvent;
-import net.md_5.bungee.api.event.PreLoginEvent;
 import net.md_5.bungee.api.event.ServerConnectEvent;
-import net.md_5.bungee.api.event.ServerPreConnectedEvent;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.api.plugin.Plugin;
 import net.md_5.bungee.api.plugin.PluginManager;
@@ -36,6 +33,7 @@ import net.md_5.bungee.config.ConfigurationProvider;
 import net.md_5.bungee.config.YamlConfiguration;
 import net.md_5.bungee.event.EventHandler;
 import net.md_5.bungee.event.EventPriority;
+import protocolsupport.api.events.PlayerLoginStartEvent;
 import tgbungeeauth.bungee.auth.db.AuthDataStorage;
 import tgbungeeauth.bungee.auth.db.AuthDatabase;
 import tgbungeeauth.bungee.auth.db.PlayerAuth;
@@ -48,7 +46,6 @@ import tgbungeeauth.bungee.commands.LoginCommand;
 import tgbungeeauth.bungee.commands.RegisterCommand;
 import tgbungeeauth.bungee.config.Messages;
 import tgbungeeauth.bungee.config.Settings;
-import tgbungeeauth.shared.ChannelNames;
 
 public class TGBungeeAuthBungee extends Plugin implements Listener {
 
@@ -100,17 +97,10 @@ public class TGBungeeAuthBungee extends Plugin implements Listener {
 			}
 			ConfigurationProvider provider = ConfigurationProvider.getProvider(YamlConfiguration.class);
 			try {
-				provider.save(BungeeUtils.copyDefaultOptions(provider.load(configfile), provider.load(defconfigfile)), configfile);
+				provider.save(Utils.copyDefaultOptions(provider.load(configfile), provider.load(defconfigfile)), configfile);
 			} catch (IOException e) {
 			}
 			defconfigfile.delete();
-		}
-
-		try {
-			Class.forName(ServerPreConnectedEvent.class.getName());
-		} catch (Throwable t) {
-			getLogger().severe("Unable to find special event");
-			ProxyServer.getInstance().stop();
 		}
 
 		try {
@@ -144,26 +134,24 @@ public class TGBungeeAuthBungee extends Plugin implements Listener {
 	}
 
 	@EventHandler(priority = EventPriority.LOWEST)
-	public void onPreLogin(PreLoginEvent event) {
+	public void onPreLogin(PlayerLoginStartEvent event) {
 
-		String name = event.getConnection().getName();
+		String name = event.getName();
 
 		String regex = Settings.nickRegex;
 
 		if ((name.length() > Settings.maxNickLength) || (name.length() < Settings.minNickLength)) {
-			event.setCancelReason(new TextComponent(Messages.restrictionNameLength));
+			event.denyLogin(Messages.restrictionNameLength);
 			return;
 		}
 
 		try {
 			if (!name.matches(regex)) {
-				event.setCancelled(true);
-				event.setCancelReason(new TextComponent(Messages.restrictionRegex.replace("REG_EX", regex)));
+				event.denyLogin(Messages.restrictionRegex.replace("REG_EX", regex));
 				return;
 			}
 		} catch (PatternSyntaxException pse) {
-			event.setCancelled(true);
-			event.setCancelReason(new TextComponent("Invalid regex configured. Please norify administrator about this"));
+			event.denyLogin(ChatColor.DARK_RED + "Invalid regex configured. Please notify administrator about this");
 			return;
 		}
 
@@ -171,12 +159,10 @@ public class TGBungeeAuthBungee extends Plugin implements Listener {
 		try {
 			oplayer = ProxyServer.getInstance().getPlayer(name);
 		} catch (Throwable t) {
-			event.setCancelled(true);
-			event.setCancelReason(new TextComponent("Error while logging in, please try again"));
+			event.denyLogin(ChatColor.DARK_RED + "Error while logging in, please try again");
 		}
 		if ((oplayer != null) && !oplayer.getAddress().getAddress().getHostAddress().equals(event.getConnection().getAddress().getHostString())) {
-			event.setCancelled(true);
-			event.setCancelReason(new TextComponent(Messages.restrictionAlreadyPlaying));
+			event.denyLogin(Messages.restrictionAlreadyPlaying);
 			return;
 		}
 
@@ -184,22 +170,20 @@ public class TGBungeeAuthBungee extends Plugin implements Listener {
 		if (auth != null) {
 			String realnickname = auth.getRealNickname();
 			if (!name.equals(realnickname)) {
-				event.setCancelled(true);
-				event.setCancelReason(new TextComponent(Messages.restrictionInvalidCase.replace("REALNAME", realnickname)));
+				event.denyLogin(Messages.restrictionInvalidCase.replace("REALNAME", realnickname));
 				return;
 			}
 
 			if (!auth.getHostname().isEmpty()) {
-				if (!event.getConnection().getVirtualHost().getHostString().startsWith(auth.getHostname())) {
-					event.setCancelled(true);
-					event.setCancelReason(new TextComponent(Messages.optsecurityHostnameWrong));
+				if (!event.getHostname().startsWith(auth.getHostname())) {
+					event.denyLogin(Messages.optsecurityHostnameWrong);
 					return;
 				}
 			}
 
 			if (auth.isOnlineMode()) {
-				event.getConnection().setOnlineMode(true);
-				event.getConnection().setForcedUniqueId(UUID.nameUUIDFromBytes(("OfflinePlayer:" + name).getBytes(Charsets.UTF_8)));
+				event.setOnlineMode(true);
+				event.setForcedUUID(UUID.nameUUIDFromBytes(("OfflinePlayer:" + name).getBytes(Charsets.UTF_8)));
 			}
 		}
 	}
@@ -270,17 +254,6 @@ public class TGBungeeAuthBungee extends Plugin implements Listener {
 				return;
 			}
 			event.setTarget(authserveri);
-		}
-	}
-
-	@EventHandler(priority = EventPriority.LOWEST)
-	public void onPreConnect(ServerPreConnectedEvent event) throws IOException {
-		ProxiedPlayer player = event.getPlayer();
-		Server server = event.getServer();
-		if (server.getInfo().getName().equals(Settings.authserver) || succauth.contains(player.getUniqueId())) {
-			BungeeUtils.writePluginMessage(server, ChannelNames.SECUREKEY_SUBCHANNEL, stream -> {
-				stream.writeUTF(Settings.securekey);
-			});
 		}
 	}
 
