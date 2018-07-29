@@ -1,6 +1,0 @@
-name: TGBungeeAuth
-main: tgbungeeauth.server.TGBungeeAuthBukkit
-version: 1.0
-author: _Shevchik_
-load: STARTUP
-softdepend: [ProtocolSupport, ProtocolLib]

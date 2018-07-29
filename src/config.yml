@@ -1,5 +1,3 @@
-securekey: "ChangeThisKeyAfterInstall"
-
 bungeecord:
   authserver: "authserver"
   login:
@@ -47,8 +45,3 @@ bungeecord:
           disabled: "&eLicense mode disabled"
   messages:
     notloggedin: "&4Login first"
-
-gameserver:
-  messages:
-    timeout: "&4Timeout while receiving secure key, please make sure that you authenticated in lobby"
-    missmatch: "&4Invalid secure key received, please make sure that gameserver and bungeecord secure keys match"
