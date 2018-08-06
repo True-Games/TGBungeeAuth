@@ -5,25 +5,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.PatternSyntaxException;
-
-import com.google.common.base.Charsets;
+import java.util.logging.Level;
 
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.ProxyServer;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.md_5.bungee.api.config.ServerInfo;
-import net.md_5.bungee.api.connection.Connection;
 import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.event.ChatEvent;
-import net.md_5.bungee.api.event.PlayerDisconnectEvent;
 import net.md_5.bungee.api.event.PostLoginEvent;
 import net.md_5.bungee.api.event.ServerConnectEvent;
 import net.md_5.bungee.api.plugin.Listener;
@@ -33,7 +25,11 @@ import net.md_5.bungee.config.ConfigurationProvider;
 import net.md_5.bungee.config.YamlConfiguration;
 import net.md_5.bungee.event.EventHandler;
 import net.md_5.bungee.event.EventPriority;
+import protocolsupport.api.Connection;
+import protocolsupport.api.ProtocolSupportAPI;
 import protocolsupport.api.events.PlayerLoginStartEvent;
+import protocolsupport.api.events.PlayerProfileCompleteEvent;
+import protocolsupport.api.utils.Profile;
 import tgbungeeauth.auth.db.AuthDataStorage;
 import tgbungeeauth.auth.db.AuthDatabase;
 import tgbungeeauth.auth.db.PlayerAuth;
@@ -56,21 +52,6 @@ public class TGBungeeAuthBungee extends Plugin implements Listener {
 
 	public TGBungeeAuthBungee() {
 		instance = this;
-	}
-
-	private final Set<UUID> succauth = Collections.newSetFromMap(new ConcurrentHashMap<>());
-	private final Map<UUID, ServerInfo> targetservers = new ConcurrentHashMap<>();
-
-	public boolean isAuthed(ProxiedPlayer player) {
-		return succauth.contains(player.getUniqueId());
-	}
-
-	public void finishAuth(ProxiedPlayer player) {
-		succauth.add(player.getUniqueId());
-		ServerInfo target = targetservers.get(player.getUniqueId());
-		if (target != null) {
-			player.connect(target);
-		}
 	}
 
 	private final AuthDatabase authdatabase = new AuthDatabase(new AuthDataStorage(), 60);
@@ -133,97 +114,163 @@ public class TGBungeeAuthBungee extends Plugin implements Listener {
 		authdatabase.save();
 	}
 
+	protected static final String ADDITIONAL_SECURITY_VALID_METADATA_KEY = "TGAuthBungee:SecurityValid";
+	protected static final String LOGGED_IN_METADATA_KEY = "TGAuthBungee:LoggedIn";
+	protected static final String TARGET_SERVER_METADATA_KEY = "TGAuthBungee:TargetServer";
+
+	public boolean isAuthed(ProxiedPlayer player) {
+		return Utils.getConnection(player).hasMetadata(LOGGED_IN_METADATA_KEY);
+	}
+
+	public void finishAuth(ProxiedPlayer player) {
+		Connection connection = Utils.getConnection(player);
+		connection.addMetadata(LOGGED_IN_METADATA_KEY, Boolean.TRUE);
+		ServerInfo target = (ServerInfo) connection.getMetadata(TARGET_SERVER_METADATA_KEY);
+		if (target != null) {
+			player.connect(target);
+		}
+	}
+
 	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPreLogin(PlayerLoginStartEvent event) {
-
-		String name = event.getName();
-
-		String regex = Settings.nickRegex;
-
-		if ((name.length() > Settings.maxNickLength) || (name.length() < Settings.minNickLength)) {
-			event.denyLogin(Messages.restrictionNameLength);
-			return;
-		}
-
 		try {
+
+			Connection connection = event.getConnection();
+
+			String name = connection.getProfile().getName();
+
+			//validate name
+			String regex = Settings.nickRegex;
+			if ((name.length() > Settings.maxNickLength) || (name.length() < Settings.minNickLength)) {
+				event.denyLogin(Messages.restrictionNameLength);
+				return;
+			}
 			if (!name.matches(regex)) {
 				event.denyLogin(Messages.restrictionRegex.replace("REG_EX", regex));
 				return;
 			}
-		} catch (PatternSyntaxException pse) {
-			event.denyLogin(ChatColor.DARK_RED + "Invalid regex configured. Please notify administrator about this");
-			return;
-		}
 
-		ProxiedPlayer oplayer = null;
-		try {
-			oplayer = ProxyServer.getInstance().getPlayer(name);
-		} catch (Throwable t) {
-			event.denyLogin(ChatColor.DARK_RED + "Error while logging in, please try again");
-		}
-		if ((oplayer != null) && !oplayer.getAddress().getAddress().getHostAddress().equals(event.getConnection().getAddress().getHostString())) {
-			event.denyLogin(Messages.restrictionAlreadyPlaying);
-			return;
-		}
+			//check additional security
+			PlayerAuth auth = authdatabase.getAuth(name);
+			if (auth != null) {
+				if (!auth.getHostname().isEmpty()) {
+					if (event.getHostname().startsWith(auth.getHostname())) {
+						connection.addMetadata(ADDITIONAL_SECURITY_VALID_METADATA_KEY, Boolean.TRUE);
+					} else {
+						event.denyLogin(Messages.optsecurityHostnameWrong);
+						return;
+					}
+				}
 
-		PlayerAuth auth = authdatabase.getAuth(name);
-		if (auth != null) {
-			String realnickname = auth.getRealNickname();
-			if (!name.equals(realnickname)) {
-				event.denyLogin(Messages.restrictionInvalidCase.replace("REALNAME", realnickname));
-				return;
-			}
-
-			if (!auth.getHostname().isEmpty()) {
-				if (!event.getHostname().startsWith(auth.getHostname())) {
-					event.denyLogin(Messages.optsecurityHostnameWrong);
-					return;
+				if (auth.isOnlineMode()) {
+					event.setOnlineMode(true);
+					connection.addMetadata(ADDITIONAL_SECURITY_VALID_METADATA_KEY, Boolean.TRUE);
 				}
 			}
 
-			if (auth.isOnlineMode()) {
-				event.setOnlineMode(true);
-				event.setForcedUUID(UUID.nameUUIDFromBytes(("OfflinePlayer:" + name).getBytes(Charsets.UTF_8)));
+		} catch (Throwable t) {
+			event.denyLogin(ChatColor.DARK_RED + "Error while logging in, please try again");
+			getLogger().log(Level.SEVERE, t, () -> "Error while processing login start");
+		}
+	}
+
+	@EventHandler(priority = EventPriority.HIGHEST)
+	public void onProfileResolve(PlayerProfileCompleteEvent event) {
+		try {
+			Profile profile = event.getConnection().getProfile();
+			//fix name case if possible
+			PlayerAuth auth = authdatabase.getAuth(profile.getOriginalName());
+			if (auth != null) {
+				event.setForcedName(auth.getRealNickname());
 			}
+			String name = Utils.ternaryNotNull(event.getForcedName(), profile::getName);
+			UUID uuid = Profile.generateOfflineModeUUID(name);
+			//force offline mode uuid based on name
+			event.setForcedUUID(uuid);
+			//dont allow logging in twice
+			ProxiedPlayer oplayer = Utils.ternaryNotNull(ProxyServer.getInstance().getPlayer(name), () -> ProxyServer.getInstance().getPlayer(uuid));
+			if ((oplayer != null) && isAuthed(oplayer) && !oplayer.getAddress().getAddress().getHostAddress().equals(event.getConnection().getAddress().getHostString())) {
+				event.denyLogin(Messages.restrictionAlreadyPlaying);
+			}
+		} catch (Throwable t) {
+			event.denyLogin(ChatColor.DARK_RED + "Error while logging in, please try again");
+			getLogger().log(Level.SEVERE, t, () -> "Error while processing profile complete");
 		}
 	}
 
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onPlayerJoin(PostLoginEvent event) {
-		ProxiedPlayer player = event.getPlayer();
+		try {
 
-		PlayerAuth auth = authdatabase.getAuth(player.getName());
-		if (auth != null && (auth.isOnlineMode() || !auth.getHostname().isEmpty())) {
-			AsyncLogin.login(player);
-			return;
-		}
+			ProxiedPlayer player = event.getPlayer();
 
-		long timeout = Settings.timeout;
-		if (timeout != 0) {
-			ProxyServer.getInstance().getScheduler().schedule(TGBungeeAuthBungee.this, () -> {
-				if (player.isConnected() && !isAuthed(player)) {
-					player.disconnect(new TextComponent(Messages.timedOut));
-				}
-			}, timeout, TimeUnit.SECONDS);
-		}
-
-		String helpmsg = authdatabase.isAuthAvailable(player.getName()) ? Messages.loginHelp : Messages.registerHelp;
-		Runnable msgtask = new Runnable() {
-			@Override
-			public void run() {
-				if (player.isConnected() && !isAuthed(player)) {
-					player.sendMessage(new TextComponent(helpmsg));
-					ProxyServer.getInstance().getScheduler().schedule(TGBungeeAuthBungee.this, this, Settings.messageInterval, TimeUnit.SECONDS);
-				}
+			Connection connection = ProtocolSupportAPI.getConnection(player);
+			//Don't allow player to use completely different name, or auth will break //TODO: make all auth queries use original name instead
+			Profile profile = Utils.getConnection(player).getProfile();
+			if (!profile.getOriginalName().equalsIgnoreCase(profile.getName())) {
+				player.disconnect(new TextComponent("Internal error: Different original and forced names"));
+				return;
 			}
-		};
-		msgtask.run();
+
+			//autologin if additional security check passed
+			if (connection.hasMetadata(ADDITIONAL_SECURITY_VALID_METADATA_KEY)) {
+				AsyncLogin.login(player);
+				return;
+			}
+
+			//schedule timeout kick
+			long timeout = Settings.timeout;
+			if (timeout != 0) {
+				ProxyServer.getInstance().getScheduler().schedule(TGBungeeAuthBungee.this, () -> {
+					if (player.isConnected() && !isAuthed(player)) {
+						player.disconnect(new TextComponent(Messages.timedOut));
+					}
+				}, timeout, TimeUnit.SECONDS);
+			}
+
+			//schedule help login/register message
+			String helpmsg = authdatabase.isAuthAvailable(player.getName()) ? Messages.loginHelp : Messages.registerHelp;
+			Runnable msgtask = new Runnable() {
+				@Override
+				public void run() {
+					if (player.isConnected() && !isAuthed(player)) {
+						player.sendMessage(new TextComponent(helpmsg));
+						ProxyServer.getInstance().getScheduler().schedule(TGBungeeAuthBungee.this, this, Settings.messageInterval, TimeUnit.SECONDS);
+					}
+				}
+			};
+			msgtask.run();
+
+		} catch (Throwable t) {
+			event.getPlayer().disconnect(new TextComponent(ChatColor.DARK_RED + "Error while logging in, please try again"));
+			getLogger().log(Level.SEVERE, t, () -> "Error while processing login finish");
+		}
 	}
 
-	private final HashSet<String> allowedCommands = new HashSet<>(Arrays.asList("/l", "/login", "/reg", "/register"));
+	@EventHandler(priority = EventPriority.LOWEST)
+	public void onServerConnect(ServerConnectEvent event) {
+		try {
+			ProxiedPlayer player = event.getPlayer();
+			if (!isAuthed(player)) {
+				ServerInfo authserveri = ProxyServer.getInstance().getServerInfo(Settings.authserver);
+				if (authserveri == null) {
+					player.disconnect(new TextComponent(ChatColor.RED + "Auth server not found"));
+					return;
+				}
+				Utils.getConnection(player).addMetadata(TARGET_SERVER_METADATA_KEY, event.getTarget());
+				event.setTarget(authserveri);
+			}
+		} catch (Throwable t) {
+			event.getPlayer().disconnect(new TextComponent(ChatColor.DARK_RED + "Error while logging in, please try again"));
+			getLogger().log(Level.SEVERE, t, () -> "Error while processing server connect");
+		}
+	}
+
+
+	protected final HashSet<String> allowedCommands = new HashSet<>(Arrays.asList("/l", "/login", "/reg", "/register"));
 	@EventHandler(priority = EventPriority.LOWEST)
 	public void onCommand(ChatEvent event) {
-		Connection sender = event.getSender();
+		net.md_5.bungee.api.connection.Connection sender = event.getSender();
 		if (sender instanceof ProxiedPlayer) {
 			ProxiedPlayer player = (ProxiedPlayer) sender;
 			if (!isAuthed(player)) {
@@ -233,27 +280,6 @@ public class TGBungeeAuthBungee extends Plugin implements Listener {
 					player.sendMessage(new TextComponent(Messages.notloggedin));
 				}
 			}
-		}
-	}
-
-	@EventHandler(priority = EventPriority.LOWEST)
-	public void onQuit(PlayerDisconnectEvent event) {
-		ProxiedPlayer player = event.getPlayer();
-		succauth.remove(player.getUniqueId());
-		targetservers.remove(player.getUniqueId());
-	}
-
-	@EventHandler(priority = EventPriority.LOWEST)
-	public void onServerConnect(ServerConnectEvent event) {
-		ProxiedPlayer player = event.getPlayer();
-		if (!isAuthed(player)) {
-			targetservers.put(player.getUniqueId(), event.getTarget());
-			ServerInfo authserveri = ProxyServer.getInstance().getServerInfo(Settings.authserver);
-			if (authserveri == null) {
-				player.disconnect(new TextComponent(ChatColor.RED + "Auth server not found"));
-				return;
-			}
-			event.setTarget(authserveri);
 		}
 	}
 

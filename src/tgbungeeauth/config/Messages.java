@@ -30,7 +30,6 @@ public class Messages {
 	public static String noPerms;
 	public static String restrictionNameLength;
 	public static String restrictionRegex;
-	public static String restrictionInvalidCase;
 	public static String restrictionAlreadyPlaying;
 	public static String optsecurityHostnameWrong;
 	public static String optsecurityHostnameAdded;
@@ -59,7 +58,6 @@ public class Messages {
 		noPerms = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.noperms"));
 		restrictionNameLength = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.restriction.namelength"));
 		restrictionRegex = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.restriction.regex"));
-		restrictionInvalidCase = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.restriction.invalidcase"));
 		restrictionAlreadyPlaying = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.restriction.alreadyplaying"));
 		optsecurityHostnameWrong = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.optsecurity.hostname.wrong"));
 		optsecurityHostnameAdded = ChatColor.translateAlternateColorCodes('&', config.getString("bungeecord.login.messages.optsecurity.hostname.set"));
