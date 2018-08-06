@@ -189,7 +189,7 @@ public class TGBungeeAuthBungee extends Plugin implements Listener {
 			event.setForcedUUID(uuid);
 			//dont allow logging in twice
 			ProxiedPlayer oplayer = Utils.ternaryNotNull(ProxyServer.getInstance().getPlayer(name), () -> ProxyServer.getInstance().getPlayer(uuid));
-			if ((oplayer != null) && isAuthed(oplayer) && !oplayer.getAddress().getAddress().getHostAddress().equals(event.getConnection().getAddress().getHostString())) {
+			if ((oplayer != null) && (isAuthed(oplayer) || !oplayer.getAddress().getAddress().getHostAddress().equals(event.getConnection().getAddress().getHostString()))) {
 				event.denyLogin(Messages.restrictionAlreadyPlaying);
 			}
 		} catch (Throwable t) {
