@@ -32,7 +32,7 @@ public class HostnameCommand extends Command {
 			}
 
 			if (args.length == 0) {
-				auth.setHostname(null);
+				auth.setHostname("");
 				player.sendMessage(new TextComponent(Messages.optsecurityHostnameRemoved));
 			} else {
 				auth.setHostname(args[0]);
